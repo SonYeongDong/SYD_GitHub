@@ -1,0 +1,412 @@
+-연습문제 1번
+-->[예제3-1]ex03-01.c를 open, read 등에서 발생할 수 있는 에러를 처리하는 코드로 변경하시오.
+
+#include <stdio.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+int main(void) 
+{
+	int filedes, fdnew1, fdnew2;
+	ssize_t nread;
+	off_t newpos;
+
+	char buffer[1024];
+	char content[] = "Helloworld\n";
+
+	filedes = open("data.txt", O_RDWR);
+
+	if(filedes == -1) 
+	{
+		printf("파일 open오류!\n");
+		exit(1);
+	}
+
+	nread = read(filedes, buffer, 1024);
+	if(nread == -1) 
+	{
+		printf("파일 read 오류\n");
+		exit(1);
+	}
+	printf("%s", buffer);
+	
+	write(filedes, content, strlen(content));
+
+	newpos = lseek(filedes, (off_t)0, SEEK_SET);
+	nread = read(filedes, buffer, 1024);
+	printf("%s", buffer);
+
+	close(filedes);
+
+	fdnew1 = open("newdata1.txt", O_RDWR | O_CREAT, 0644);
+	fdnew2 = creat("newdata2.txt", 0644);
+
+	close(fdnew1);
+	close(fdnew2);
+
+	return 0;
+}
+
+
+-연습문제 2번
+-->자신의 홈 디렉터리에 temp0.txt 파일을 생성하는 프로그램을 작성하시오(단, 파일에 대한 경로는 상대 경로와 절대 경로 모두 사용해본다).
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+
+int main(void)
+{
+	int filedes;
+
+	filedes = open("/home/syd/temp0.txt", O_CREAT | O_RDWR, 0644); //절대경로
+	//filedes = open("~/temp0.txt", O_CREAT | O_RDWR, 0644); 상대경로
+	
+	close(filedes);
+	
+	return 0;
+}
+
+
+-연습문제 3번
+-->이미 존재하는 파일로 덮어쓰기를 수행하려 한다. 새로운 데이터가 기존의 데이터보다 작을 경우 쓰기 작업이 끝난 후에 새로운 데이터 뒤에 기존의 데이터가 남아 있는지를 확인하시오.
+
+#include <stdio.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <string.h>
+
+int main(void)
+{
+    int filedes;
+
+    ssize_t nread;
+
+    char content[]="Hello";
+    char buffer1[1024];
+    char buffer2[1024];
+
+    filedes = open("data.txt", O_RDWR);
+    // data.txt에는 문자열 Linux_is_best!! 가 저장되어 있음.
+
+    read(filedes, buffer1, 1024);
+
+    printf("덮어쓰기 전 data.txt 파일의 내용 : %s \n", buffer1);
+
+    write(filedes, content, strlen(content));
+    lseek(filedes, (off_t)0, SEEK_SET);
+    read(filedes, buffer2, 1024);
+
+    printf("덮어쓰기 후 data.txt 파일의 내용: %s \n", buffer2);
+
+    close(filedes);
+
+    return 0;
+}
+
+-기존의 데이터를 보존할 필요가 없을 경우, 파일 OPEN시 O_TRUNC라는 플래그 사용한다.
+
+-O_TRUNC 플래그는 파일을 개방한 후 기존의 내용을 모두 삭제하고 읽기/쓰기 포인터를 첫 부분으로 이동함
+
+-O_TRUNC 플래그 사용하지 않을 경우, 새롭게 저장하려는 데이터가 기존의 데이터보다 적다면, 새롭게 저장한 데이터 뒤에 기존의 데이터 일부가 남아있게 된다.
+
+
+-연습문제 4번
+-->lseek을 사용하여 읽기/쓰기 포인터의 위치를 변경하려 한다. 도달할 수 없는 임의의 위치가 지정되었을 때 lseek의 반환값이 무엇인지 확인하고 읽기/쓰기 포인터가 어떻게 변화하는지 확인하시오(예, SEEK_END를 기존으로 10만큼 이동한다).
+
+#include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+int main(void)
+{
+
+	int filedes;
+	off_t newpos;
+
+	filedes = open("data.txt", O_RDONLY); // data.txt 내용 : Hello_My_name_is_Son_Yeong_Dong
+	newpos = lseek(filedes, (off_t)10, SEEK_END);
+	printf("file size : %d\n", newpos);
+
+}
+
+-결과 : 41
+(data.txt의 크기 31+(off_t)의 크기 10)이 출력되었다.
+
+
+-연습문제 5번
+-->read 또는 wirte를 수행한 후 읽기/쓰기 포인터가 어떻게 변하는지 lseek을 사용하여 확인하시오.
+
+#include <stdio.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <string.h>
+
+int main(void)
+{
+	int filedes ;
+
+	ssize_t nread;
+
+	off_t newpos;
+    
+	char buffer[1024];
+	char content[] = "Hello_My_name_is_Son_Yeong_Dong";
+    
+	filedes = open("data.txt", O_RDWR | O_CREAT, 0644);
+
+	nread = read(filedes, buffer, 1024);
+	printf("읽기 수행후 포인터 위치 : %ld\n", newpos = lseek(filedes, (off_t)0, SEEK_CUR));
+    
+	write(filedes, content, strlen(content));    
+	printf("쓰기 수행후 포인터 위치 : %ld\n", newpos = lseek(filedes, (off_t)0, SEEK_CUR));
+
+	close(filedes);
+	
+	return 0;
+}
+    
+-결과
+읽기 후 포인터 위치 : 0
+쓰기 후 포인터 위치 : 3
+
+
+-연습문제 6번
+-->unlink와 remove를 사용하여 비어있는 디렉터리를 삭제하는 프로그램을 작성하시오.
+
+#include <stdio.h>
+#include <unistd.h>
+
+int main(int argc, char * pathname[]) 
+{
+	if(unlink(pathname[1]) == -1) 
+	{
+		if(remove(pathname[1]) == -1)
+			printf("디렉터리 삭제실패 \n");
+
+			else
+			printf("remove를 통해 %s 디렉터리를 삭제 성공.\n", pathname[1]);
+	}	
+	
+	else 
+	{
+		printf("unlink를 통해 %s 디렉터리를 삭제 성공.\n", pathname[1]);
+	}
+	
+	return 0;
+}
+
+
+-연습문제 7번
+-->텍스트 파일을 개방한 후 알파벳의 개수를 계산하는 프로그램을 작성하시오.
+
+#include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdio.h>
+
+int main(void) 
+{
+	int filedes;
+	ssize_t nread;
+
+	char buffer[1024];
+
+	int i=0;
+	int count=0; 
+
+	filedes = open("data.txt", O_RDONLY);
+
+	while((nread = read(filedes, buffer, 1024)) > 0)
+
+	while(buffer[i])
+	{
+		if((buffer[i] >= 65 && buffer[i] <= 90) || (buffer[i] >= 97 && buffer[i] <= 122))
+		{
+			count++;
+		}
+		i++;
+	}
+
+	printf("%d\n", count);
+	
+	close(filedes);
+
+	return 0;
+}
+
+-연습문제 8번
+-->알파벳 소문자를 대문자로 변환하도록 8번 문제의 프로그램을 수정하시오.
+
+#include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <string.h>
+
+int main(void)
+{
+	int file;
+
+	ssize_t nread;
+
+	char buffer[1024];
+
+	int i=0;
+
+	file = open("data.txt", O_RDONLY);
+
+	while((nread = read(file, buffer, 1024)) > 0)
+
+	while(buffer[i])
+	{
+		if(buffer[i] >= 97 && buffer[i] <= 122)
+		{	
+			buffer[i] = toupper(buffer[i]);
+		}
+		i++;
+	}
+	printf("%s\n", buffer);
+	
+	close(file);
+	
+	return 0;
+}
+
+
+-연습문제 9번
+-->연습문제 8번 프로그램에서 버퍼 크기를 1바이트로 수정해 보시오.
+
+#include <stdio.h>
+#include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+int main(void)
+{
+	int file;
+
+	ssize_t nread;
+
+	char buffer[1];
+
+	int i=0;
+
+	file = open("data.txt", O_RDONLY);
+
+	while((nread = read(file, buffer, 1)) > 0)
+
+	while(buffer[i])
+	{
+		if(buffer[i] >= 97 && buffer[i] <= 122)
+		{
+			buffer[i] = toupper(buffer[i]);
+		}
+		i++;
+	}
+
+	printf("%s\n", buffer);
+	
+	close(file);
+
+	return 0;
+}
+
+
+-연습문제 10번
+-->두 개의 프로그램이 읽기와 쓰기 가능한 상태(O_RDWR)로 동일한 파일을 동시에 열었다. 한 프로그램이 파일의 내용을 변경한 후 파일을 닫지 않고 대기 중인 상태에서 다른 프로그램이 파일의 내용을 읽을 때 변경된 내용을 읽게 되는지 혹은 변경되기 전의 내용을 읽게 되는지를 확인하는 프로그램을 작성하고 그 결과를 확인하시오.
+
+#include <stdio.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <string.h>
+
+int main(void)
+{
+    int file1, file2;
+
+    ssize_t nread;
+
+    char content1[]= "file1";
+    char content2[]= "file2";
+    char buffer[1024];
+
+    file1 = open("data.txt", O_RDWR | O_CREAT, 0644);
+    write(file1, content1, strlen(content1));
+
+    file2 = open("data.txt", O_RDWR | O_CREAT, 0644);
+    write(file2, content2, strlen(content2));
+    
+    //read(file1, buffer, 1024);
+    //printf("data.txt 내용 %s\n", buffer);
+
+    close(file1);
+    close(file2);
+
+    return 0;
+}
+
+
+-연습문제 11번
+-->read 호출이 -1을 반환하는 경우를 나열하시오.
+
+read가 -1을 반환하는 것은 함수의 기본 기능을 수행하는데 있어서 문제가 있었음을 의미한다. 반면에 0을
+반환하는 것은 함수의 기본 기능을 제대로 수행하였으나 파일로부터 읽을거리가 없었다라는 의미를 가진다. 그래
+서 read가 -1을 반환했다는 것은 읽으려는 시도 자체가 실패했다고 보면 된다. read가 -1을 리턴하는 경우는 %
+man read를 실행하여 "ERRORS" 부분에 기술되어 있다.
+
+-추가내용 : READ() 를 사용하기 위해서는 파일 OPEN시 읽기 전용(O_RDONLY)이나, 읽기/쓰기 전용(O_RDWR)이어야 한다.
+쓰기 전용(O_WRONLY)으로 파일 OPEN 후, READ로 파일 디스크립터를 읽을 경우, -1을 반환하게 된다.
+
+
+-연습문제 12번
+-->표준 C라이브러리 함수인 fopen, fread, ftell, feof를 사용하여 파일의 내용을 모두 읽은 상태에서 feof와 ftell의 변환값이 무엇인지 확인하시오.
+
+#include <stdio.h>
+#include <string.h>
+#include <sys/types.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+int main(void)
+{
+	FILE *fp1;
+
+	long size;
+
+	char buffer[60];
+
+	fp1 = fopen("data.txt", "rb");
+
+	fseek(fp1, (off_t)0, SEEK_END);
+
+	size = ftell(fp1);
+
+	while(feof(fp1) == 0)
+	{
+        	fgets(buffer, sizeof(buffer), fp1);
+
+	}
+
+	printf("size변수의 값 : %ld\n", size);
+	printf("feof의 값 : %d\n", feof(fp1));
+
+	fclose(fp1);
+	
+	return 0;
+}
+
+-data.txt 파일의 내용 : Hello_My_name_is_Son_Yeong_Dong
+
+-결과
+size변수의 값 : 32
+
+feof의 값 : 1
+
+feof : 파일포인터가 끝에 위치할 경우 0이 아닌 값을 반환, 끝에 위치하지 않을 경우 0 반환한다.
+
+ftell : 파일에서 해당하는 위치의 바이트값 반환한다.

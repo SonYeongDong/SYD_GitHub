@@ -1,0 +1,108 @@
+-연습문제 1번
+-->sigacion 함수를 이용하여 사용자가 인터럽트 키를 입력하면 임의의 함수가 호출되고 파일에 
+   종료 메시지를 저장하는 프로그램을 작성하시오.
+
+-소스코드-
+  1 #include <unistd.h>
+  2 #include <signal.h>
+  3 #include <fcntl.h>
+  4 #include <stdio.h>
+  5 #include <string.h>
+  6 
+  7 int flag = 1;
+  8 
+  9 int main(void)
+ 10 {
+ 11         static struct sigaction act;
+ 12 
+ 13         void int_handler(int);
+ 14 
+ 15         act.sa_handler = int_handler;
+ 16         sigfillset(&(act.sa_mask));
+ 17         sigaction(SIGINT, &act, NULL);
+ 18 
+ 19         while(flag)
+ 20         {
+ 21                 printf("실행중...\n");
+ 22                 sleep(1);
+ 23         }
+ 24 
+ 25         return 0;
+ 26 }
+ 27 
+ 28 void int_handler(int signum)
+ 29 {
+ 30         int fd;
+ 31         char *msg = "사용자 키 인터럽트키 발생...\n";
+ 32 
+ 33         fd = open("사용자_인터럽트.txt", O_CREAT | O_RDWR, 0644);
+ 34         write(fd, msg, strlen(msg));
+ 35         close(fd);
+ 36 
+ 37         flag = 0;
+ 38 
+ 39         return;
+ 40 }
+
+-실행결과-
+ 실행중...
+ 실행중...
+ 실행중...
+ 실행중...
+ ^C
+ (사용자_인터럽트.txt파일이 같은 파일 경로에 생성됨)
+
+-사용자_인터럽트.txt 내용-
+ 사용자 키 인터럽트키 발생...
+
+
+-연습문제 2번
+-->[예제 10-5]ex10-05.c를 수정하여 모든 시그널을 봉쇄하여 "don't disturb me"를 5번 출력한 
+   후 SIGINT의 봉쇄만 제외하여 'disturb me'를 출려하는 프로그램을 작성하시오.
+
+-소스코드-
+  1 #include <unistd.h>
+  2 #include <signal.h>
+  3 #include <stdio.h>
+  4 
+  5 int main(void)
+  6 {
+  7         sigset_t set;
+  8         int count = 1;
+  9 
+ 10         sigfillset(&set);don't distrub me (1);
+ 11         sigprocmask(SIG_BLOCK, &set, NULL);
+ 12 
+ 13         while(count <= 10)
+ 14         {
+ 15                 if(count <= 5)
+ 16                 {
+ 17                         printf("don't distrub me (%d)\n", count);
+ 18                 }
+ 19                 else
+ 20                 {
+ 21                         if(count == 6)
+ 22                         {
+ 23                                 sigemptyset(&set);
+ 24                                 sigaddset(&set, SIGINT);
+ 25                                 sigprocmask(SIG_UNBLOCK, &set, NULL);
+ 26                         }
+ 27                         printf("disturb me ..\n");
+ 28                 }
+ 29                 sleep(1);
+ 30                 count++;
+ 31         }
+ 32 return 0;
+ 33 }
+
+-실행결과-
+ don't distrub me (1)
+ don't distrub me (2)
+ don't distrub me (3)
+ don't distrub me (4)
+ don't distrub me (5)
+ disturb me ..
+ disturb me ..
+ disturb me ..
+ disturb me ..
+ disturb me ..
